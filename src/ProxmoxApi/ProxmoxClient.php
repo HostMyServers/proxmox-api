@@ -19,6 +19,8 @@ class ProxmoxClient
     protected $username;
     protected $ticket;
     protected $CSRFPreventionToken;
+    protected $sslverify;
+    protected $useproxy;
 
     /**
      * ProxmoxApi constructor.
@@ -28,9 +30,11 @@ class ProxmoxClient
      * @param string $realm
      * @throws ProxmoxApiException
      */
-    public function __construct($host, $user, $password, $realm = 'pam')
+    public function __construct($host, $user, $password, $realm = 'pam', $sslverify = true, $useproxy = '')
     {
         $this->host = $host;
+        $this->sslverify = $sslverify;
+        $this->useproxy = $useproxy;
 
         $resp = $this->create('/access/ticket', [
             'password' => $password,
@@ -100,8 +104,13 @@ class ProxmoxClient
 
         curl_setopt($curl, CURLOPT_URL, $url);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, $this->sslverify);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, $this->sslverify);
         curl_setopt($curl, CURLOPT_HEADER, true);
+
+        if (isset($this->useproxy) && strlen($this->useproxy) > 0) {
+            curl_setopt($curl, CURLOPT_PROXY, $this->useproxy);
+        }
 
         if($this->ticket){
             curl_setopt($curl, CURLOPT_COOKIE, "PVEAuthCookie={$this->ticket}");
