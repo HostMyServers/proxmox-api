@@ -2,7 +2,7 @@
 
 namespace ProxmoxApi;
 
-use     \Client;
+use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 
 /**
