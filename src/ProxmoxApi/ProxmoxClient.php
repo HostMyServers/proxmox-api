@@ -2,6 +2,9 @@
 
 namespace ProxmoxApi;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
+
 /**
  * Class ProxmoxClient
  * @package ProxmoxApi
@@ -10,18 +13,35 @@ class ProxmoxClient
 {
     use ProxmoxMethodsTrait;
 
-    const REQUEST_MENTHOD_DELETE = 'DELETE';
-    const REQUEST_MENTHOD_POST = 'POST';
-    const REQUEST_MENTHOD_PUT = 'PUT';
-    const REQUEST_MENTHOD_GET = 'GET';
+    // Constantes plus lisibles et corrigées (MENTHOD -> METHOD)
+    private const REQUEST_METHODS = [
+        'DELETE' => 'DELETE',
+        'POST'   => 'POST',
+        'PUT'    => 'PUT',
+        'GET'    => 'GET'
+    ];
 
-    protected $host;
-    protected $username;
-    protected $ticket;
-    protected $CSRFPreventionToken;
-    protected $sslverify;
-    protected $useproxy;
-    protected $proxyauth;
+    // Configuration par défaut
+    private const DEFAULT_CONFIG = [
+        'realm'     => 'pam',
+        'sslverify' => true,
+        'useproxy'  => '',
+        'proxyauth' => ''
+    ];
+
+    // Regrouper les propriétés par type/usage
+    private Client $client;
+
+    // Authentification
+    private string $username;
+    private string $ticket;
+    private string $CSRFPreventionToken;
+
+    // Configuration
+    private string $host;
+    private bool $sslverify;
+    private string $useproxy;
+    private string $proxyauth;
 
     /**
      * ProxmoxApi constructor.
@@ -34,24 +54,49 @@ class ProxmoxClient
      * @param string $proxyauth Format: 'username:password'
      * @throws ProxmoxApiException
      */
-    public function __construct($host, $user, $password, $realm = 'pam', $sslverify = true, $useproxy = '', $proxyauth = '')
+    public function __construct(
+        string $host,
+        string $user,
+        string $password,
+        string $realm = self::DEFAULT_CONFIG['realm'],
+        bool $sslverify = self::DEFAULT_CONFIG['sslverify'],
+        string $useproxy = self::DEFAULT_CONFIG['useproxy'],
+        string $proxyauth = self::DEFAULT_CONFIG['proxyauth']
+    ) {
+        $this->initializeConfiguration($host, $sslverify, $useproxy, $proxyauth);
+        $this->initializeClient();
+        $this->authenticate($user, $password, $realm);
+    }
+
+    private function initializeConfiguration(string $host, bool $sslverify, string $useproxy, string $proxyauth): void
     {
         $this->host = $host;
         $this->sslverify = $sslverify;
         $this->useproxy = $useproxy;
         $this->proxyauth = $proxyauth;
+    }
 
+    private function initializeClient(): void
+    {
+        $this->client = new Client([
+            'base_uri' => "https://{$this->host}/api2/json/",
+            'verify' => $this->sslverify,
+            'proxy' => $this->useproxy ?: null,
+            'proxy_auth' => $this->proxyauth ?: null,
+        ]);
+    }
+
+    private function authenticate(string $user, string $password, string $realm): void
+    {
         $resp = $this->create('/access/ticket', [
-            'password' => $password,
             'username' => $user,
+            'password' => $password,
             'realm'    => $realm
         ]);
 
-        $this->CSRFPreventionToken = $resp->CSRFPreventionToken;
         $this->username = $resp->username;
         $this->ticket = $resp->ticket;
-
-        // print_r($resp);
+        $this->CSRFPreventionToken = $resp->CSRFPreventionToken;
     }
 
     function client()
@@ -80,79 +125,58 @@ class ProxmoxClient
      * @return mixed
      * @throws ProxmoxApiException
      */
-    public function request($method, $action, array $params = [])
+    public function request(string $method, string $action, array $params = []): mixed
     {
-        $curl = curl_init();
-        $url = "https://{$this->host}/api2/json/" . ltrim($action, '/');
+        $options = $this->prepareRequestOptions($method, $params);
 
-        switch (strtoupper($method)) {
-            case (self::REQUEST_MENTHOD_POST):
-                curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($params));
-                curl_setopt($curl, CURLOPT_POST, true);
-                break;
+        try {
+            $response = $this->client->request(
+                $method,
+                ltrim($action, '/'),
+                $options
+            );
 
-            case (self::REQUEST_MENTHOD_PUT):
-                curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($params));
-                curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "PUT");
-                break;
+            return $this->parseResponse($response);
+        } catch (GuzzleException $e) {
+            throw new ProxmoxApiException($e->getMessage(), $e->getCode());
+        }
+    }
 
-            case (self::REQUEST_MENTHOD_DELETE):
-                curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-                break;
+    private function prepareRequestOptions(string $method, array $params): array
+    {
+        $options = [
+            'headers' => $this->getHeaders(),
+        ];
 
-            case (self::REQUEST_MENTHOD_GET):
-                if ($params) $url .= '?' . http_build_query($params);
-                break;
-
-            default:
-                throw new ProxmoxApiException("Unknow method '$method'!");
+        $method = strtoupper($method);
+        if (in_array($method, [self::REQUEST_METHODS['POST'], self::REQUEST_METHODS['PUT']])) {
+            $options['form_params'] = $params;
+        } elseif ($method === self::REQUEST_METHODS['GET']) {
+            $options['query'] = $params;
         }
 
-        curl_setopt($curl, CURLOPT_URL, $url);
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, $this->sslverify);
-        curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, $this->sslverify);
-        curl_setopt($curl, CURLOPT_HEADER, true);
+        return $options;
+    }
 
-        if (isset($this->useproxy) && strlen($this->useproxy) > 0) {
-            curl_setopt($curl, CURLOPT_PROXY, $this->useproxy);
-            if (!empty($this->proxyauth)) {
-                curl_setopt($curl, CURLOPT_PROXYUSERPWD, $this->proxyauth);
-            }
-        }
+    private function getHeaders(): array
+    {
+        $headers = [];
 
         if ($this->ticket) {
-            curl_setopt($curl, CURLOPT_COOKIE, "PVEAuthCookie={$this->ticket}");
+            $headers['Cookie'] = "PVEAuthCookie={$this->ticket}";
         }
 
         if ($this->CSRFPreventionToken) {
-            curl_setopt($curl, CURLOPT_HTTPHEADER, ["CSRFPreventionToken: {$this->CSRFPreventionToken}"]);
+            $headers['CSRFPreventionToken'] = $this->CSRFPreventionToken;
         }
 
-        $resp = curl_exec($curl);
-        $info = curl_getinfo($curl);
+        return $headers;
+    }
 
-        $headers = [];
-
-        foreach (preg_split("/\n/", trim(substr($resp, 0, $info['header_size']))) as $it) {
-            if (preg_match('#^HTTP/\d.\d\s+(\d+)\s+(.+)$#', $it, $m)) {
-                $headers['status'] = ['code' => intval($m[1]), 'msg' => $m[2]];
-            } else if (preg_match('#^([^:]+):\s+(.*)$#', $it, $m)) {
-                $headers[$m[1]] = $m[2];
-            }
-        }
-
-        if (curl_errno($curl) > 0) {
-            throw new ProxmoxApiException(curl_error($curl), curl_errno($curl));
-        }
-
-        if ($headers['status']['code'] >= 400) {
-            throw new ProxmoxApiException($headers['status']['msg'], $headers['status']['code']);
-        }
-
-        $body = substr($resp, $info['header_size']);
+    private function parseResponse($response): mixed
+    {
+        $body = $response->getBody()->getContents();
         $data = json_decode($body);
-
         return $data->data;
     }
 }

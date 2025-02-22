@@ -4,7 +4,7 @@ namespace ProxmoxApi;
 
 
 /**
- * Trait ProxmoxApiTrait
+ * Trait ProxmoxMethodsTrait
  * @package ProxmoxApi
  */
 trait ProxmoxMethodsTrait
@@ -12,12 +12,12 @@ trait ProxmoxMethodsTrait
     /**
      * @return ProxmoxClient
      */
-    abstract function client();
+    abstract protected function client(): ProxmoxClient;
 
     /**
      * @return string
      */
-    abstract function path();
+    abstract protected function path(): string;
 
     /**
      * @param string $action
@@ -25,18 +25,13 @@ trait ProxmoxMethodsTrait
      * @return mixed
      * @throws ProxmoxApiException
      */
-    public function get($action, array $params = []) {
-        return $this->client()->request(ProxmoxClient::REQUEST_MENTHOD_GET, $this->pathNormalize($action), $params);
-    }
-
-    /**
-     * @param string $action
-     * @param array $params
-     * @return mixed
-     * @throws ProxmoxApiException
-     */
-    public function create($action, array $params = []) {
-        return $this->client()->request(ProxmoxClient::REQUEST_MENTHOD_POST, $this->pathNormalize($action), $params);
+    public function get(string $action, array $params = []): mixed
+    {
+        return $this->client()->request(
+            'GET',
+            $this->pathNormalize($action),
+            $params
+        );
     }
 
     /**
@@ -45,8 +40,28 @@ trait ProxmoxMethodsTrait
      * @return mixed
      * @throws ProxmoxApiException
      */
-    public function set($action, array $params = []) {
-        return $this->client()->request(ProxmoxClient::REQUEST_MENTHOD_PUT, $this->pathNormalize($action), $params);
+    public function create(string $action, array $params = []): mixed
+    {
+        return $this->client()->request(
+            'POST',
+            $this->pathNormalize($action),
+            $params
+        );
+    }
+
+    /**
+     * @param string $action
+     * @param array $params
+     * @return mixed
+     * @throws ProxmoxApiException
+     */
+    public function set(string $action, array $params = []): mixed
+    {
+        return $this->client()->request(
+            'PUT',
+            $this->pathNormalize($action),
+            $params
+        );
     }
 
     /**
@@ -54,11 +69,19 @@ trait ProxmoxMethodsTrait
      * @return mixed
      * @throws ProxmoxApiException
      */
-    public function delete($action) {
-        return $this->client()->request(ProxmoxClient::REQUEST_MENTHOD_DELETE, $this->pathNormalize($action));
+    public function delete(string $action): mixed
+    {
+        return $this->client()->request(
+            'DELETE',
+            $this->pathNormalize($action)
+        );
     }
 
-    private function pathNormalize($action) {
+    /**
+     * Normalise le chemin de l'action en s'assurant qu'il y a un seul slash entre les segments
+     */
+    private function pathNormalize(string $action): string
+    {
         return rtrim($this->path(), '/') . '/' . ltrim($action, '/');
     }
 }
