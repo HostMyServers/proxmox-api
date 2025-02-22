@@ -84,6 +84,9 @@ class ProxmoxClient
             'verify' => $this->sslverify,
             'proxy' => $this->useproxy ?: null,
             'proxy_auth' => $this->proxyauth ?: null,
+            'timeout' => 5.0,           // Total request timeout
+            'connect_timeout' => 5.0,   // Connection timeout
+            'read_timeout' => 5.0,      // Read timeout
         ]);
     }
 
