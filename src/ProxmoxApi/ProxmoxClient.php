@@ -23,7 +23,6 @@ class ProxmoxClient
 
     // Default configuration
     private const DEFAULT_CONFIG = [
-        'realm'     => 'pam',
         'sslverify' => true,
         'useproxy'  => '',
         'proxyauth' => '',
@@ -50,6 +49,7 @@ class ProxmoxClient
      * @param string $host
      * @param string $user
      * @param string $password
+     * @param string $realm
      * @param array $config Configuration optionnelle
      * @throws ProxmoxApiException
      */
@@ -57,6 +57,7 @@ class ProxmoxClient
         string $host,
         string $user,
         string $password,
+        string $realm,
         array $config = []
     ) {
         $config = array_merge(self::DEFAULT_CONFIG, $config);
@@ -69,7 +70,7 @@ class ProxmoxClient
             $config['timeout']
         );
         $this->initializeClient();
-        $this->authenticate($user, $password, $config['realm']);
+        $this->authenticate($user, $password, $realm);
     }
 
     private function initializeConfiguration(
@@ -98,7 +99,7 @@ class ProxmoxClient
         ]);
     }
 
-    private function authenticate(string $user, string $password, string $realm = 'pam'): void
+    private function authenticate(string $user, string $password, string $realm): void
     {
         $resp = $this->create('/access/ticket', [
             'username' => $user,
