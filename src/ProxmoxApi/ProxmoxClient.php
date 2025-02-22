@@ -26,7 +26,8 @@ class ProxmoxClient
         'realm'     => 'pam',
         'sslverify' => true,
         'useproxy'  => '',
-        'proxyauth' => ''
+        'proxyauth' => '',
+        'timeout'   => 5  // Réduit à 5 secondes
     ];
 
     // Regrouper les propriétés par type/usage
@@ -144,6 +145,9 @@ class ProxmoxClient
 
             return $this->parseResponse($response);
         } catch (GuzzleException $e) {
+            if (strpos($e->getMessage(), 'timed out') !== false) {
+                throw new ProxmoxApiException("Proxmox API request timed out after 5 seconds", 408);
+            }
             throw new ProxmoxApiException($e->getMessage(), $e->getCode());
         }
     }
