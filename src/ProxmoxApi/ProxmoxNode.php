@@ -14,24 +14,25 @@ class ProxmoxNode
     /**
      * @var ProxmoxClient
      */
-    protected $client;
+    protected ProxmoxClient $client;
 
     /**
      * @var string
      */
-    protected $name;
+    protected string $name;
 
     /**
-     * @var \stdClass
+     * @var \stdClass|null
      */
-    private $config;
+    private ?\stdClass $config = null;
 
     /**
      * ProxmoxNode constructor.
      * @param ProxmoxClient $client
      * @param string $name
      */
-    public function __construct(ProxmoxClient $client, $name) {
+    public function __construct(ProxmoxClient $client, $name)
+    {
         $this->client = $client;
         $this->name = $name;
     }
@@ -40,21 +41,24 @@ class ProxmoxNode
      * @param int $vmid
      * @return ProxmoxVM
      */
-    public function vm($vmid) {
+    public function vm($vmid)
+    {
         return new ProxmoxVM($this, $vmid);
     }
 
     /**
      * @return ProxmoxClient
      */
-    public function client() {
+    protected function client(): ProxmoxClient
+    {
         return $this->client;
     }
 
     /**
      * @return string
      */
-    public function path() {
+    protected function path(): string
+    {
         return "/nodes/{$this->name}";
     }
 
@@ -62,8 +66,9 @@ class ProxmoxNode
      * @return \stdClass
      * @throws ProxmoxApiException
      */
-    public function config() {
-        if(is_null($this->config)) {
+    public function config(): \stdClass
+    {
+        if ($this->config === null) {
             $this->config = $this->get('config');
         }
         return $this->config;

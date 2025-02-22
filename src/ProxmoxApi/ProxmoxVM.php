@@ -13,33 +13,42 @@ class ProxmoxVM
     /**
      * @var ProxmoxNode
      */
-    protected $node;
+    protected ProxmoxNode $node;
 
     /**
      * @var int
      */
-    protected $id;
+    protected int $id;
 
     /**
-     * @var \stdClass
+     * @var \stdClass|null
      */
-    private $config;
+    private ?\stdClass $config = null;
 
     /**
      * ProxmoxVM constructor.
      * @param ProxmoxNode $node
      * @param int $vmid
      */
-    public function __construct(ProxmoxNode $node, $vmid) {
+    public function __construct(ProxmoxNode $node, int $vmid)
+    {
         $this->node = $node;
         $this->id = $vmid;
     }
 
-    function client() {
+    /**
+     * @return ProxmoxClient
+     */
+    protected function client(): ProxmoxClient
+    {
         return $this->node->client();
     }
 
-    function path() {
+    /**
+     * @return string
+     */
+    protected function path(): string
+    {
         return "{$this->node->path()}/qemu/{$this->id}";
     }
 
@@ -47,8 +56,9 @@ class ProxmoxVM
      * @return \stdClass
      * @throws ProxmoxApiException
      */
-    public function config() {
-        if(is_null($this->config)) {
+    public function config(): \stdClass
+    {
+        if ($this->config === null) {
             $this->config = $this->get('config');
         }
         return $this->config;
