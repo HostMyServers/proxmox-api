@@ -47,29 +47,29 @@ class ProxmoxClient
 
     /**
      * ProxmoxApi constructor.
-     * @param $host
-     * @param $user
-     * @param $password
-     * @param string $realm
-     * @param bool $sslverify
-     * @param string $useproxy
-     * @param string $proxyauth Format: 'username:password'
-     * @param float $timeout Global timeout in seconds
+     * @param string $host
+     * @param string $user
+     * @param string $password
+     * @param array $config Configuration optionnelle
      * @throws ProxmoxApiException
      */
     public function __construct(
         string $host,
         string $user,
         string $password,
-        string $realm = self::DEFAULT_CONFIG['realm'],
-        bool $sslverify = self::DEFAULT_CONFIG['sslverify'],
-        string $useproxy = self::DEFAULT_CONFIG['useproxy'],
-        string $proxyauth = self::DEFAULT_CONFIG['proxyauth'],
-        float $timeout = self::DEFAULT_CONFIG['timeout']
+        array $config = []
     ) {
-        $this->initializeConfiguration($host, $sslverify, $useproxy, $proxyauth, $timeout);
+        $config = array_merge(self::DEFAULT_CONFIG, $config);
+
+        $this->initializeConfiguration(
+            $host,
+            $config['sslverify'],
+            $config['useproxy'],
+            $config['proxyauth'],
+            $config['timeout']
+        );
         $this->initializeClient();
-        $this->authenticate($user, $password, $realm);
+        $this->authenticate($user, $password, $config['realm']);
     }
 
     private function initializeConfiguration(
@@ -98,7 +98,7 @@ class ProxmoxClient
         ]);
     }
 
-    private function authenticate(string $user, string $password, string $realm): void
+    private function authenticate(string $user, string $password, string $realm = 'pam'): void
     {
         $resp = $this->create('/access/ticket', [
             'username' => $user,
