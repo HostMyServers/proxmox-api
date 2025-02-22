@@ -33,15 +33,15 @@ class ProxmoxClient
     private Client $client;
 
     // Authentification
-    private string $username;
-    private string $ticket;
-    private string $CSRFPreventionToken;
+    private string $username = '';
+    private string $ticket = '';
+    private string $CSRFPreventionToken = '';
 
     // Configuration
-    private string $host;
-    private bool $sslverify;
-    private string $useproxy;
-    private string $proxyauth;
+    private string $host = '';
+    private bool $sslverify = true;
+    private string $useproxy = '';
+    private string $proxyauth = '';
 
     /**
      * ProxmoxApi constructor.
