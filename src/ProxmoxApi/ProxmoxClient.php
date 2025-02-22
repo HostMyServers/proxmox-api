@@ -2,7 +2,7 @@
 
 namespace ProxmoxApi;
 
-use GuzzleHttp\Client;
+use     \Client;
 use GuzzleHttp\Exception\GuzzleException;
 
 /**
@@ -99,12 +99,18 @@ class ProxmoxClient
         $this->CSRFPreventionToken = $resp->CSRFPreventionToken;
     }
 
-    function client()
+    /**
+     * @return ProxmoxClient
+     */
+    protected function client(): ProxmoxClient
     {
         return $this;
     }
 
-    function path()
+    /**
+     * @return string
+     */
+    protected function path(): string
     {
         return '';
     }
