@@ -49,7 +49,7 @@ class ProxmoxNode
     /**
      * @return ProxmoxClient
      */
-    protected function client(): ProxmoxClient
+    public function client(): ProxmoxClient
     {
         return $this->client;
     }
@@ -57,7 +57,7 @@ class ProxmoxNode
     /**
      * @return string
      */
-    protected function path(): string
+    public function path(): string
     {
         return "/nodes/{$this->name}";
     }

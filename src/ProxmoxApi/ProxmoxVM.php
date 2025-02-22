@@ -39,7 +39,7 @@ class ProxmoxVM
     /**
      * @return ProxmoxClient
      */
-    protected function client(): ProxmoxClient
+    public function client(): ProxmoxClient
     {
         return $this->node->client();
     }
@@ -47,7 +47,7 @@ class ProxmoxVM
     /**
      * @return string
      */
-    protected function path(): string
+    public function path(): string
     {
         return "{$this->node->path()}/qemu/{$this->id}";
     }
