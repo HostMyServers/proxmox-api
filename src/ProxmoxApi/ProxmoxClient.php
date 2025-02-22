@@ -21,6 +21,7 @@ class ProxmoxClient
     protected $CSRFPreventionToken;
     protected $sslverify;
     protected $useproxy;
+    protected $proxyauth;
 
     /**
      * ProxmoxApi constructor.
@@ -28,13 +29,17 @@ class ProxmoxClient
      * @param $user
      * @param $password
      * @param string $realm
+     * @param bool $sslverify
+     * @param string $useproxy
+     * @param string $proxyauth Format: 'username:password'
      * @throws ProxmoxApiException
      */
-    public function __construct($host, $user, $password, $realm = 'pam', $sslverify = true, $useproxy = '')
+    public function __construct($host, $user, $password, $realm = 'pam', $sslverify = true, $useproxy = '', $proxyauth = '')
     {
         $this->host = $host;
         $this->sslverify = $sslverify;
         $this->useproxy = $useproxy;
+        $this->proxyauth = $proxyauth;
 
         $resp = $this->create('/access/ticket', [
             'password' => $password,
@@ -49,11 +54,13 @@ class ProxmoxClient
         // print_r($resp);
     }
 
-    function client() {
+    function client()
+    {
         return $this;
     }
 
-    function path() {
+    function path()
+    {
         return '';
     }
 
@@ -61,7 +68,8 @@ class ProxmoxClient
      * @param string $name
      * @return ProxmoxNode
      */
-    public function node($name) {
+    public function node($name)
+    {
         return new ProxmoxNode($this, $name);
     }
 
@@ -77,14 +85,13 @@ class ProxmoxClient
         $curl = curl_init();
         $url = "https://{$this->host}/api2/json/" . ltrim($action, '/');
 
-        switch(strtoupper($method))
-        {
-            case(self::REQUEST_MENTHOD_POST):
+        switch (strtoupper($method)) {
+            case (self::REQUEST_MENTHOD_POST):
                 curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($params));
                 curl_setopt($curl, CURLOPT_POST, true);
                 break;
 
-            case(self::REQUEST_MENTHOD_PUT):
+            case (self::REQUEST_MENTHOD_PUT):
                 curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($params));
                 curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "PUT");
                 break;
@@ -93,13 +100,12 @@ class ProxmoxClient
                 curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "DELETE");
                 break;
 
-            case(self::REQUEST_MENTHOD_GET):
-                if($params) $url .= '?' . http_build_query($params);
+            case (self::REQUEST_MENTHOD_GET):
+                if ($params) $url .= '?' . http_build_query($params);
                 break;
 
             default:
                 throw new ProxmoxApiException("Unknow method '$method'!");
-
         }
 
         curl_setopt($curl, CURLOPT_URL, $url);
@@ -110,14 +116,17 @@ class ProxmoxClient
 
         if (isset($this->useproxy) && strlen($this->useproxy) > 0) {
             curl_setopt($curl, CURLOPT_PROXY, $this->useproxy);
+            if (!empty($this->proxyauth)) {
+                curl_setopt($curl, CURLOPT_PROXYUSERPWD, $this->proxyauth);
+            }
         }
 
-        if($this->ticket){
+        if ($this->ticket) {
             curl_setopt($curl, CURLOPT_COOKIE, "PVEAuthCookie={$this->ticket}");
         }
 
-        if($this->CSRFPreventionToken){
-            curl_setopt($curl, CURLOPT_HTTPHEADER, [ "CSRFPreventionToken: {$this->CSRFPreventionToken}" ]);
+        if ($this->CSRFPreventionToken) {
+            curl_setopt($curl, CURLOPT_HTTPHEADER, ["CSRFPreventionToken: {$this->CSRFPreventionToken}"]);
         }
 
         $resp = curl_exec($curl);
@@ -125,19 +134,19 @@ class ProxmoxClient
 
         $headers = [];
 
-        foreach(preg_split("/\n/", trim(substr($resp, 0, $info['header_size']))) as $it) {
-            if(preg_match('#^HTTP/\d.\d\s+(\d+)\s+(.+)$#', $it, $m)) {
+        foreach (preg_split("/\n/", trim(substr($resp, 0, $info['header_size']))) as $it) {
+            if (preg_match('#^HTTP/\d.\d\s+(\d+)\s+(.+)$#', $it, $m)) {
                 $headers['status'] = ['code' => intval($m[1]), 'msg' => $m[2]];
-            } else if(preg_match('#^([^:]+):\s+(.*)$#', $it, $m)) {
+            } else if (preg_match('#^([^:]+):\s+(.*)$#', $it, $m)) {
                 $headers[$m[1]] = $m[2];
             }
         }
 
-        if(curl_errno($curl) > 0) {
+        if (curl_errno($curl) > 0) {
             throw new ProxmoxApiException(curl_error($curl), curl_errno($curl));
         }
 
-        if($headers['status']['code'] >= 400) {
+        if ($headers['status']['code'] >= 400) {
             throw new ProxmoxApiException($headers['status']['msg'], $headers['status']['code']);
         }
 
