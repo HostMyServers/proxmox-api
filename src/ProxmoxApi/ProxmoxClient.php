@@ -21,13 +21,13 @@ class ProxmoxClient
         'GET'    => 'GET'
     ];
 
-    // Configuration par défaut
+    // Default configuration
     private const DEFAULT_CONFIG = [
         'realm'     => 'pam',
         'sslverify' => true,
         'useproxy'  => '',
         'proxyauth' => '',
-        'timeout'   => 5  // Réduit à 5 secondes
+        'timeout'   => 4.0  // Global timeout in seconds
     ];
 
     // Regrouper les propriétés par type/usage
@@ -43,6 +43,7 @@ class ProxmoxClient
     private bool $sslverify = true;
     private string $useproxy = '';
     private string $proxyauth = '';
+    private float $timeout;
 
     /**
      * ProxmoxApi constructor.
@@ -53,6 +54,7 @@ class ProxmoxClient
      * @param bool $sslverify
      * @param string $useproxy
      * @param string $proxyauth Format: 'username:password'
+     * @param float $timeout Global timeout in seconds
      * @throws ProxmoxApiException
      */
     public function __construct(
@@ -62,19 +64,26 @@ class ProxmoxClient
         string $realm = self::DEFAULT_CONFIG['realm'],
         bool $sslverify = self::DEFAULT_CONFIG['sslverify'],
         string $useproxy = self::DEFAULT_CONFIG['useproxy'],
-        string $proxyauth = self::DEFAULT_CONFIG['proxyauth']
+        string $proxyauth = self::DEFAULT_CONFIG['proxyauth'],
+        float $timeout = self::DEFAULT_CONFIG['timeout']
     ) {
-        $this->initializeConfiguration($host, $sslverify, $useproxy, $proxyauth);
+        $this->initializeConfiguration($host, $sslverify, $useproxy, $proxyauth, $timeout);
         $this->initializeClient();
         $this->authenticate($user, $password, $realm);
     }
 
-    private function initializeConfiguration(string $host, bool $sslverify, string $useproxy, string $proxyauth): void
-    {
+    private function initializeConfiguration(
+        string $host,
+        bool $sslverify,
+        string $useproxy,
+        string $proxyauth,
+        float $timeout
+    ): void {
         $this->host = $host;
         $this->sslverify = $sslverify;
         $this->useproxy = $useproxy;
         $this->proxyauth = $proxyauth;
+        $this->timeout = $timeout;
     }
 
     private function initializeClient(): void
@@ -84,9 +93,8 @@ class ProxmoxClient
             'verify' => $this->sslverify,
             'proxy' => $this->useproxy ?: null,
             'proxy_auth' => $this->proxyauth ?: null,
-            'timeout' => 5.0,           // Total request timeout
-            'connect_timeout' => 5.0,   // Connection timeout
-            'read_timeout' => 5.0,      // Read timeout
+            'timeout' => $this->timeout,         // Response timeout
+            'connect_timeout' => $this->timeout  // Connection timeout
         ]);
     }
 
