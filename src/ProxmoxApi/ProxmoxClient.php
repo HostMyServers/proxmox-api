@@ -174,7 +174,9 @@ class ProxmoxClient
         if (in_array($method, [self::REQUEST_METHODS['POST'], self::REQUEST_METHODS['PUT']])) {
             $options['form_params'] = $params;
         } elseif ($method === self::REQUEST_METHODS['GET']) {
-            $options['query'] = $params;
+            $options['query'] = array_map(function ($value) {
+                return is_bool($value) ? (int)$value : $value;
+            }, $params);
         }
 
         return $options;
