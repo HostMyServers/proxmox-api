@@ -26,7 +26,7 @@ class ProxmoxClient
         'sslverify' => true,
         'useproxy'  => '',
         'proxyauth' => '',
-        'timeout'   => 4.0  // Global timeout in seconds
+        'timeout'   => 20.0  // Global timeout in seconds
     ];
 
     // Regrouper les propriétés par type/usage
