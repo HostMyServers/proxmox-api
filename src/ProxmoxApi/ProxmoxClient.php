@@ -34,7 +34,7 @@ class ProxmoxClient
 
     // Authentification
     private string $username = '';
-    private string $ticket = '';
+    public string $ticket = '';
     private string $CSRFPreventionToken = '';
 
     // Configuration
